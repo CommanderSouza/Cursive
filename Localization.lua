@@ -73,6 +73,10 @@ L:RegisterTranslations("enUS", function()
 		["Max Curses"] = true,
 		["Max Rows"] = true,
 		["Max Columns"] = true,
+		["Curse Ordering"] = true,
+		["Order applied"] = true,
+		["Expiring soonest -> latest"] = true,
+		["Expiring latest -> soonest"] = true,
 
 
 		-- spells
@@ -135,9 +139,13 @@ L:RegisterTranslations("enUS", function()
 		["Expose Armor"] = true,
 		["Garrote"] = true,
 		["Deadly Poison"] = true,
+		["Deadly Poison II"] = true,
+		["Deadly Poison III"] = true,
+		["Deadly Poison IV"] = true,
+		["Deadly Poison V"] = true,
 
 		-- shaman
-		["Flame Shock"]  = true,
+		["Flame Shock"] = true,
 
 		-- warlock
 		["Conflagrate"] = true,
@@ -230,6 +238,10 @@ L:RegisterTranslations("zhCN", function()
 		["Max Curses"] = "最大诅咒数",
 		["Max Rows"] = "最大行数",
 		["Max Columns"] = "最大列数",
+		["Curse Ordering"] = "诅咒排序",
+		["Order applied"] = "应用顺序",
+		["Expiring soonest -> latest"] = "即将到期->最新",
+		["Expiring latest -> soonest"] = "最新->即将到期",
 
 		-- spells
 		["Rank 1"] = "等级 1",
@@ -291,9 +303,13 @@ L:RegisterTranslations("zhCN", function()
 		["Expose Armor"] = "破甲", -- no idea if right
 		["Garrote"] = "锁喉", -- no idea if right
 		["Deadly Poison"] = "致命毒药", -- no idea if right
+		["Deadly Poison II"] = "致命毒药 II",
+		["Deadly Poison III"] = "致命毒药 III",
+		["Deadly Poison IV"] = "致命毒药 IV",
+		["Deadly Poison V"] = "致命毒药 V",
 
 		-- shaman
-		["Flame Shock"]  = "烈焰震击", -- no idea if right
+		["Flame Shock"] = "烈焰震击", -- no idea if right
 
 		-- warlock
 		["Conflagrate"] = "引燃", -- no idea if right
