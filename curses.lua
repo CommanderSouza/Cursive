@@ -15,7 +15,14 @@ local curses = {
 		[18931] = true,
 		[18932] = true,
 	},
+	darkHarvestSpellIds = {
+		[52550] = true,
+		[52551] = true,
+		[52552] = true,
+	},
+	darkHarvestData = {},
 	guids = {},
+	isChanneling = false,
 	pendingCast = {},
 	resistSoundGuids = {},
 	expiringSoundGuids = {},
@@ -23,8 +30,6 @@ local curses = {
 }
 
 -- combat events for curses
-local afflict_test = "^(.+) is afflicted by (.+) %((%d+)%)" -- for stacks 2-5 will be "Fire Vulnerability (2)".
-local gains_test = "^(.+) gains (.+) %((%d+)%)" -- for stacks 2-5 will be "Fire Vulnerability (2)".
 local fades_test = L["(.+) fades from (.+)"]
 local resist_test = L["Your (.+) was resisted by (.+)"]
 
@@ -65,7 +70,7 @@ function curses:LoadCurses()
 			spellrank = "Rank 1"
 		end
 
-		curses.trackedCurseNameRanksToSpellSlots[spellname .. spellrank] = i
+		curses.trackedCurseNameRanksToSpellSlots[string.lower(spellname) .. spellrank] = i
 		i = i + 1
 	end
 
@@ -105,7 +110,7 @@ function curses:ScanTooltipForDuration(curseSpellID)
 end
 
 function curses:GetCurseDuration(curseSpellID)
-	if curses.trackedCurseIds[curseSpellID].variable_duration then
+	if curses.trackedCurseIds[curseSpellID].variableDuration then
 		return curses:ScanTooltipForDuration(curseSpellID)
 	end
 
@@ -142,6 +147,17 @@ Cursive:RegisterEvent("LEARNED_SPELL_IN_TAB", function()
 	curses:LoadCurses()
 end)
 
+local function StopChanneling()
+	curses.isChanneling = false
+end
+
+Cursive:RegisterEvent("SPELLCAST_CHANNEL_START", function()
+	curses.isChanneling = true
+end);
+Cursive:RegisterEvent("SPELLCAST_CHANNEL_STOP", StopChanneling);
+Cursive:RegisterEvent("SPELLCAST_INTERRUPTED", StopChanneling);
+Cursive:RegisterEvent("SPELLCAST_FAILED", StopChanneling);
+
 Cursive:RegisterEvent("UNIT_CASTEVENT", function(casterGuid, targetGuid, event, spellID, castDuration)
 	-- immolate will fire both start and cast
 	if event == "CAST" then
@@ -161,7 +177,7 @@ Cursive:RegisterEvent("UNIT_CASTEVENT", function(casterGuid, targetGuid, event, 
 			lastGuid = targetGuid
 			Cursive:ScheduleEvent("addCurse" .. targetGuid .. curses.trackedCurseIds[spellID].name, curses.ApplyCurse, 0.2, self, spellID, targetGuid, GetTime())
 		elseif curses.conflagrateSpellIds[spellID] then
-			Cursive:ScheduleEvent("updateCurse" .. targetGuid .. L["Conflagrate"], curses.UpdateCurse, 0.2, self, spellID, targetGuid, GetTime())
+			Cursive:ScheduleEvent("updateCurse" .. targetGuid .. L["conflagrate"], curses.UpdateCurse, 0.2, self, spellID, targetGuid, GetTime())
 		end
 	elseif event == "START" then
 		if curses.trackedCurseIds[spellID] then
@@ -186,25 +202,42 @@ Cursive:RegisterEvent("UNIT_CASTEVENT", function(casterGuid, targetGuid, event, 
 			-- clear pending cast
 			curses.pendingCast = {}
 		end
+	elseif event == "CHANNEL" then
+		-- dark harvest
+		if curses.darkHarvestSpellIds[spellID] then
+			local _, guid = UnitExists("player")
+			if casterGuid ~= guid then
+				return
+			end
+
+			curses.darkHarvestData = {
+				spellID = spellID,
+				targetGuid = targetGuid,
+				castDuration = curses:ScanTooltipForDuration(spellID),
+				start = GetTime()
+			}
+		end
 	end
 end)
 
 Cursive:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE",
 		function(message)
 			-- check for resist
-			local _, _, spell, target = string.find(message, resist_test)
-			if spell and target then
+			local _, _, spellName, target = string.find(message, resist_test)
+			if spellName and target then
+				spellName = string.lower(spellName)
+
 				-- clear pending cast
 				curses.pendingCast = {}
 
-				if curses.trackedCurseNamesToTextures[spell] and lastGuid then
-					Cursive:CancelScheduledEvent("addCurse" .. lastGuid .. spell)
+				if curses.trackedCurseNamesToTextures[spellName] and lastGuid then
+					Cursive:CancelScheduledEvent("addCurse" .. lastGuid .. spellName)
 					-- check if sound should be played
 					if curses:ShouldPlayResistSound(lastGuid) then
 						PlaySoundFile("Interface\\AddOns\\Cursive\\Sounds\\resist.mp3")
 					end
-				elseif spell == L["Conflagrate"] and lastGuid then
-					Cursive:CancelScheduledEvent("updateCurse" .. lastGuid .. spell)
+				elseif spellName == L["conflagrate"] and lastGuid then
+					Cursive:CancelScheduledEvent("updateCurse" .. lastGuid .. spellName)
 				end
 			end
 		end
@@ -212,13 +245,14 @@ Cursive:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE",
 
 Cursive:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", function(message)
 	-- check if spell that faded is relevant
-	local _, _, spell, target = string.find(message, fades_test)
-	if spell and target then
-		if curses.trackedCurseNamesToTextures[spell] then
+	local _, _, spellName, target = string.find(message, fades_test)
+	if spellName and target then
+		spellName = string.lower(spellName)
+		if curses.trackedCurseNamesToTextures[spellName] then
 			-- loop through targets with active curses
 			for guid, data in pairs(curses.guids) do
 				for curseName, curseData in pairs(data) do
-					if curseName == spell then
+					if curseName == spellName then
 						-- see if target still has that curse
 						if not curses:ScanGuidForCurse(guid, curseData.spellID) then
 							-- remove curse
@@ -232,8 +266,69 @@ Cursive:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", function(message)
 end
 )
 
+function curses:GetLastTickTime(curseData)
+	local ticks = curses.trackedCurseIds[curseData.spellID].numTicks
+	if not ticks then
+		return GetTime()
+	end
+
+	local tickTime = curseData.duration / ticks
+	local currentTime = GetTime() + tickTime * .2 -- dh won't apply to previous tick if within 20% of tick time
+
+	return math.floor((currentTime - curseData.start) / tickTime) * tickTime + curseData.start
+end
+
+function curses:TrackDarkHarvest(curseData)
+	if curses.darkHarvestData["targetGuid"] and curses.darkHarvestData["targetGuid"] == curseData["targetGuid"] then
+		local dhActive = false
+		-- check if still channeling
+		if curses.isChanneling then
+			local dhTimeRemaining = curses.darkHarvestData.castDuration - (GetTime() - curses.darkHarvestData.start)
+			-- check if dh still active based on cast duration
+			if dhTimeRemaining > 0 then
+				dhActive = true
+				-- dh is active
+				if not curseData["dhStartTime"] then
+					curseData["dhStartTime"] = curses:GetLastTickTime(curseData) -- dh will reduce full tick duration
+				end
+			end
+		end
+		if curseData["dhStartTime"] and dhActive == false and not curseData["dhEndTime"] then
+			-- if dh no longer active, store end time if not already stored
+			curseData["dhEndTime"] = GetTime()
+		end
+	end
+end
+
+function curses:GetDarkHarvestReduction(curseData)
+	if curseData["dhStartTime"] then
+		local endTime = curseData["dhEndTime"] or GetTime()
+		local dhActiveTime = endTime - curseData["dhStartTime"]
+		if dhActiveTime > 0 then
+			return dhActiveTime * .2 -- 20% reduction
+		end
+	end
+	return 0
+end
+
 function curses:TimeRemaining(curseData)
-	return math.ceil(curseData.duration - (GetTime() - curseData.start))
+	local dhReduction = 0
+
+	if curses.trackedCurseIds[curseData.spellID].darkHarvest then
+		curses:TrackDarkHarvest(curseData)
+
+		dhReduction = curses:GetDarkHarvestReduction(curseData)
+	end
+
+	local remaining = curseData.duration - (GetTime() - curseData.start) - dhReduction
+	if Cursive.db.profile.curseshowdecimals and remaining < 10 then
+		-- round to 1 decimal point
+		remaining = math.floor(remaining * 10) / 10
+	else
+		remaining = math.ceil(remaining)
+	end
+
+	return remaining
 end
 
 function curses:EnableResistSound(guid)
@@ -328,6 +423,7 @@ function curses:ApplyCurse(spellID, targetGuid, startTime)
 		duration = duration,
 		start = startTime,
 		spellID = spellID,
+		targetGuid = targetGuid
 	}
 end
 
@@ -337,9 +433,9 @@ function curses:UpdateCurse(spellID, targetGuid, startTime)
 
 	if curses.conflagrateSpellIds[spellID] then
 		-- check if target has immolate
-		if curses:HasCurse(L["Immolate"], targetGuid) then
+		if curses:HasCurse(L["immolate"], targetGuid) then
 			-- reduce duration by 3 sec
-			curses.guids[targetGuid][L["Immolate"]].duration = curses.guids[targetGuid][L["Immolate"]].duration - 3
+			curses.guids[targetGuid][L["immolate"]].duration = curses.guids[targetGuid][L["immolate"]].duration - 3
 		end
 	end
 end

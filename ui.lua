@@ -525,7 +525,7 @@ ui:SetScript("OnUpdate", function()
 	if (this.tick or 1) > GetTime() then
 		return
 	else
-		this.tick = GetTime() + .2
+		this.tick = GetTime() + .1
 	end
 
 	if not ui.rootBarFrame then
