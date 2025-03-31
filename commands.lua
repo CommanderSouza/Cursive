@@ -21,6 +21,7 @@ local commandOptions = {
 local commands = {
 	["curse"] = L["/cursive curse <spellName:str>|<guid?:str>|<options?:List<str>>: Casts spell if not already on target/guid"],
 	["multicurse"] = L["/cursive multicurse <spellName:str>|<priority?:str>|<options?:List<str>>: Picks target based on priority and casts spell if not already on target"],
+	["target"] = L["/cursive target <spellName:str>|<priority?:str>|<options?:List<str>>: Targets unit based on priority if spell in range and not already on target"],
 }
 
 local PRIORITY_HIGHEST_HP = "HIGHEST_HP"
@@ -110,6 +111,10 @@ local function handleSlashCommands(msg, editbox)
 		local spellName, priority, optionsStr = Cursive.utils.strsplit("|", args)
 		local options = parseOptions(optionsStr)
 		Cursive:Multicurse(spellName, priority, options)
+	elseif command == "target" then
+		local spellName, priority, optionsStr = Cursive.utils.strsplit("|", args)
+		local options = parseOptions(optionsStr)
+		Cursive:Target(spellName, priority, options)
 	end
 end
 
@@ -444,7 +449,7 @@ end
 function Cursive:Curse(spellName, targetedGuid, options)
 	if not spellName or not targetedGuid then
 		DEFAULT_CHAT_FRAME:AddMessage(commands["curse"])
-		return
+		return false
 	end
 
 	if targetedGuid and string.sub(targetedGuid, 1, 2) ~= "0x" then
@@ -454,7 +459,7 @@ function Cursive:Curse(spellName, targetedGuid, options)
 			if options["warnings"] then
 				DEFAULT_CHAT_FRAME:AddMessage(curseNoTarget)
 			end
-			return
+			return false
 		end
 	end
 
@@ -464,7 +469,7 @@ function Cursive:Curse(spellName, targetedGuid, options)
 			if options["warnings"] then
 				DEFAULT_CHAT_FRAME:AddMessage(curseNoTarget)
 			end
-			return
+			return false
 		end
 	end
 
@@ -473,12 +478,15 @@ function Cursive:Curse(spellName, targetedGuid, options)
 
 	if targetedGuid and not Cursive.curses:HasCurse(spellNameNoRank, targetedGuid, options["refreshtime"]) and not isMobCrowdControlled(targetedGuid) then
 		castSpellWithOptions(string.lower(spellName), spellNameNoRank, targetedGuid, options)
+		return true
 	elseif options["warnings"] then
 		DEFAULT_CHAT_FRAME:AddMessage(curseNoTarget)
 	end
+
+	return false
 end
 
-function Cursive:Multicurse(spellName, priority, options)
+local function getSpellTarget(spellName, priority, options)
 	if not spellName then
 		DEFAULT_CHAT_FRAME:AddMessage(commands["multicurse"])
 		return
@@ -497,13 +505,28 @@ function Cursive:Multicurse(spellName, priority, options)
 	-- remove (Rank x) from spellName if it exists
 	local spellNameNoRank = string.lower(string.gsub(spellName, "%(.+%)", ""))
 
-	local targetedGuid = pickTarget(selectedPriority, spellNameNoRank, true, options)
+	return pickTarget(selectedPriority, spellNameNoRank, true, options)
+end
 
+function Cursive:Multicurse(spellName, priority, options)
+	local targetedGuid = getSpellTarget(spellName, priority, options)
 	if targetedGuid then
+		local spellNameNoRank = string.lower(string.gsub(spellName, "%(.+%)", ""))
 		castSpellWithOptions(string.lower(spellName), spellNameNoRank, targetedGuid, options)
+		return true
 	elseif options["warnings"] then
 		DEFAULT_CHAT_FRAME:AddMessage(curseNoTarget)
 	end
+	return false
+end
+
+function Cursive:Target(spellName, priority, options)
+	local targetedGuid = getSpellTarget(spellName, priority, options)
+	if targetedGuid then
+		TargetUnit(targetedGuid)
+		return true
+	end
+	return false
 end
 
 SLASH_CURSIVE1 = "/cursive" --creating the slash command
