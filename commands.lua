@@ -25,6 +25,7 @@ local commands = {
 }
 
 local PRIORITY_HIGHEST_HP = "HIGHEST_HP"
+local PRIORITY_LOWEST_HP = "LOWEST_HP"
 local PRIORITY_RAID_MARK = "RAID_MARK"
 local PRIORITY_RAID_MARK_SQUARE = "RAID_MARK_SQUARE"
 local PRIORITY_INVERSE_RAID_MARK = "INVERSE_RAID_MARK"
@@ -34,6 +35,7 @@ local PRIORITY_HIGHEST_HP_INVERSE_RAID_MARK = "HIGHEST_HP_INVERSE_RAID_MARK"
 
 local priorities = {
 	[PRIORITY_HIGHEST_HP] = L["Target with the highest HP."],
+	[PRIORITY_LOWEST_HP] = L["Target with the lowest HP."],
 	[PRIORITY_RAID_MARK] = L["Target with the highest raid mark."],
 	[PRIORITY_RAID_MARK_SQUARE] = L["Target with the highest raid mark with Cross set to -1 and Skull set to -2 (Square highest prio at 6)."],
 	[PRIORITY_INVERSE_RAID_MARK] = L["Target with the lowest raid mark."],
@@ -339,6 +341,10 @@ local function pickTarget(selectedPriority, spellNameNoRank, checkRange, options
 	local highestSecondaryValue = -10
 	local targetedGuid = nil
 
+	if selectedPriority == PRIORITY_LOWEST_HP then
+		highestPrimaryValue = 999999999999 -- should be bigger than any mob hp
+	end
+
 	local minHp = options["minhp"]
 	local ignoreInFight = options["allowooc"]
 	local refreshTime = options["refreshtime"]
@@ -382,6 +388,8 @@ local function pickTarget(selectedPriority, spellNameNoRank, checkRange, options
 										primaryValue = 999999999999 -- should be bigger than any mob hp
 									elseif selectedPriority == PRIORITY_HIGHEST_HP then
 										primaryValue = UnitHealth(guid) or 0
+									elseif selectedPriority == PRIORITY_LOWEST_HP then
+										primaryValue = UnitHealth(guid) or 999999999999
 									elseif selectedPriority == PRIORITY_RAID_MARK then
 										primaryValue = GetRaidTargetIndex(guid) or 0
 									elseif selectedPriority == PRIORITY_RAID_MARK_SQUARE then
@@ -411,7 +419,10 @@ local function pickTarget(selectedPriority, spellNameNoRank, checkRange, options
 										primaryValue = UnitHealth(guid) or 0
 									end
 
-									if primaryValue > highestPrimaryValue then
+									if selectedPriority == PRIORITY_LOWEST_HP and primaryValue < highestPrimaryValue then
+										highestPrimaryValue = primaryValue
+										targetedGuid = guid
+									elseif primaryValue > highestPrimaryValue then
 										highestPrimaryValue = primaryValue
 										highestSecondaryValue = secondaryValue
 										targetedGuid = guid
@@ -474,7 +485,7 @@ function Cursive:Curse(spellName, targetedGuid, options)
 	end
 
 	-- remove (Rank x) from spellName if it exists
-	local spellNameNoRank = string.lower(string.gsub(spellName, "%(.+%)", ""))
+	local spellNameNoRank = Cursive.utils.GetSpellNameNoRank(spellName)
 
 	if targetedGuid and not Cursive.curses:HasCurse(spellNameNoRank, targetedGuid, options["refreshtime"]) and not isMobCrowdControlled(targetedGuid) then
 		castSpellWithOptions(string.lower(spellName), spellNameNoRank, targetedGuid, options)
@@ -503,7 +514,7 @@ local function getSpellTarget(spellName, priority, options)
 	local selectedPriority = priority or PRIORITY_HIGHEST_HP
 
 	-- remove (Rank x) from spellName if it exists
-	local spellNameNoRank = string.lower(string.gsub(spellName, "%(.+%)", ""))
+	local spellNameNoRank = Cursive.utils.GetSpellNameNoRank(spellName)
 
 	return pickTarget(selectedPriority, spellNameNoRank, true, options)
 end
@@ -511,7 +522,7 @@ end
 function Cursive:Multicurse(spellName, priority, options)
 	local targetedGuid = getSpellTarget(spellName, priority, options)
 	if targetedGuid then
-		local spellNameNoRank = string.lower(string.gsub(spellName, "%(.+%)", ""))
+		local spellNameNoRank = Cursive.utils.GetSpellNameNoRank(spellName)
 		castSpellWithOptions(string.lower(spellName), spellNameNoRank, targetedGuid, options)
 		return true
 	elseif options["warnings"] then
