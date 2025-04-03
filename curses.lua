@@ -32,6 +32,9 @@ local curses = {
 -- combat events for curses
 local fades_test = L["(.+) fades from (.+)"]
 local resist_test = L["Your (.+) was resisted by (.+)"]
+local missed_test = L["Your (.+) missed (.+)"]
+local parry_test = L["Your (.+) is parried by (.+)"]
+local immune_test = L["Your (.+) fails. (.+) is immune"]
 
 local lastGuid = nil
 
@@ -67,7 +70,7 @@ function curses:LoadCurses()
 		end
 
 		if spellrank == "" then
-			spellrank = "Rank 1"
+			spellrank = L["Rank 1"]
 		end
 
 		curses.trackedCurseNameRanksToSpellSlots[string.lower(spellname) .. spellrank] = i
@@ -86,7 +89,7 @@ end
 
 function curses:ScanTooltipForDuration(curseSpellID)
 	-- scan spellbook for duration in case they have haste talent
-	local nameRank = curses.trackedCurseIds[curseSpellID].name .. "Rank " .. curses.trackedCurseIds[curseSpellID].rank
+	local nameRank = curses.trackedCurseIds[curseSpellID].name .. L["Rank"] .. " " .. curses.trackedCurseIds[curseSpellID].rank
 	local spellSlot = curses.trackedCurseNameRanksToSpellSlots[nameRank]
 
 	if spellSlot then
@@ -224,6 +227,19 @@ Cursive:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE",
 		function(message)
 			-- check for resist
 			local _, _, spellName, target = string.find(message, resist_test)
+			-- check for missed
+			if not spellName then
+				_, _, spellName, target = string.find(message, missed_test)
+			end
+			-- check for parry
+			if not spellName then
+				_, _, spellName, target = string.find(message, parry_test)
+			end
+			-- check for immune
+			if not spellName then
+				_, _, spellName, target = string.find(message, immune_test)
+			end
+
 			if spellName and target then
 				spellName = string.lower(spellName)
 

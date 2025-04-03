@@ -34,6 +34,9 @@ L:RegisterTranslations("enUS", function()
 		-- curses
 		["(.+) fades from (.+)"] = true,
 		["Your (.+) was resisted by (.+)"] = true,
+		["Your (.+) missed (.+)"] = true,
+		["Your (.+) is parried by (.+)"] = true,
+		["Your (.+) fails. (.+) is immune"] = true,
 
 		-- global
 		["|cffffcc00Cursive:|cffffaaaa Couldn't detect SuperWoW."] = true,
@@ -91,6 +94,7 @@ L:RegisterTranslations("enUS", function()
 
 
 		-- spells
+		["Rank"] = true,
 		["Rank 1"] = true,
 		["Rank 2"] = true,
 		["Rank 3"] = true,
@@ -207,11 +211,20 @@ L:RegisterTranslations("zhCN", function()
 		["Same as HIGHEST_HP_RAID_MARK but with RAID_MARK_SQUARE mark prio."] = "与HIGHEST_HP_RAID_MARK相同，但是RAID_MARK_SQUARE标记优先.",
 		["Same as HIGHEST_HP_RAID_MARK but with INVERSE_RAID_MARK mark prio."] = "与HIGHEST_HP_RAID_MARK相同，但是INVERSE_RAID_MARK标记优先.",
 		["|cffffcc00Cursive:|cffffaaaa Couldn't find a target to curse."] = "|cffffcc00Cursive:|cffffaaaa 找不到要诅咒的目标.",
-		["curse_duration_format"] = ".*持续([%d.]+)秒.", -- no idea if this is right
+		-- 法术描述样本
+		-- 腐蚀术：腐蚀目标，在18.69秒内造成累计828到834点伤害。
+		-- 精灵之火：使目标的护甲降低175点，持续40秒。在效果持续期间，目标无法潜行或隐形。
+		-- 扫击：对目标造成19点伤害，并在9秒内造成总计39点额外伤害。伤害受到你的攻击强度加成，奖励1个连击点数。
+		-- 虫群：敌人被飞虫围绕，攻击命中率降低2%，在18秒内受到总计99点自然伤害。
+		-- 月火术：灼烧敌人，对其造成40到48点伤害，并在18秒内造成额外的120点奥术伤害。
+		["curse_duration_format"] = "(%d+%.?%d*)秒",
 
 		-- curses
 		["(.+) fades from (.+)"] = "(.+)效果从(.+)身上消失",
 		["Your (.+) was resisted by (.+)"] = "你的(.+)被(.+)抵抗了",
+		["Your (.+) missed (.+)"] = "你的(.+)未命中(.+)",
+		["Your (.+) is parried by (.+)"] =  "你的(.+)被(.+)招架",
+		["Your (.+) fails. (.+) is immune"] = "你的(.+)失败，(.+)免疫",
 
 		-- global
 		["|cffffcc00Cursive:|cffffaaaa Couldn't detect SuperWoW."] = "|cffffcc00Cursive:|cffffaaaa 无法检测到SuperWoW.",
@@ -264,6 +277,7 @@ L:RegisterTranslations("zhCN", function()
 		["Expiring latest -> soonest"] = "最新->即将到期",
 
 		-- spells
+		["Rank"] = "等级",
 		["Rank 1"] = "等级 1",
 		["Rank 2"] = "等级 2",
 		["Rank 3"] = "等级 3",
