@@ -40,7 +40,23 @@ Cursive:RegisterDefaults("profile", {
 	filterrange = false,
 	filterraidmark = false,
 	filterhascurse = false,
+	filterignored = true,
+
+	ignorelist = {},
 })
+
+local function splitString(str, delimiter)
+	local result = {}
+	local from = 1
+	local delim_from, delim_to = string.find(str, delimiter, from)
+	while delim_from do
+		table.insert(result, string.sub(str, from, delim_from - 1))
+		from = delim_to + 1
+		delim_from, delim_to = string.find(str, delimiter, from)
+	end
+	table.insert(result, string.sub(str, from))
+	return result
+end
 
 local barOptions = {
 	["showtargetindicator"] = {
@@ -332,6 +348,38 @@ local mobFilters = {
 		end,
 		set = function(v)
 			Cursive.db.profile.filterhascurse = v
+		end,
+	},
+	["notignored"] = {
+		type = "toggle",
+		name = L["Not ignored"],
+		desc = L["Not ignored"],
+		order = 67,
+		get = function()
+			return Cursive.db.profile.filterignored
+		end,
+		set = function(v)
+			Cursive.db.profile.filterignored = v
+		end,
+	},
+	["ignorelist"] = {
+		type = "text",
+		name = L["Ignored Mobs List (Enter to save)"],
+		desc = L["Comma separated list of strings to ignore if found in the unit name"],
+		usage = "whelp, black dragonkin, player3",
+		order = 68,
+		get = function()
+			if Cursive.db.profile.ignorelist and table.getn(Cursive.db.profile.ignorelist) > 0 then
+				return table.concat(Cursive.db.profile.ignorelist, ",") or ""
+			end
+			return ""
+		end,
+		set = function(v)
+			if not v or v == "" then
+				Cursive.db.profile.ignorelist = {}
+			else
+				Cursive.db.profile.ignorelist = splitString(v, ",");
+			end
 		end,
 	},
 }
