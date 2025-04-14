@@ -617,9 +617,7 @@ ui:SetScript("OnUpdate", function()
 			shouldDisplay = Cursive:ShouldDisplayGuid(guid)
 			shouldDisplayGuids[guid] = shouldDisplay
 
-			if not shouldDisplay then
-				CheckForCleanup(guid, time)
-			else
+			if shouldDisplay then
 				numDisplayable = numDisplayable + 1
 			end
 		else
@@ -645,6 +643,8 @@ ui:SetScript("OnUpdate", function()
 				thirdMaxHp = maxHp
 				thirdMaxGuid = guid
 			end
+		else
+			CheckForCleanup(guid, time)
 		end
 	end
 
