@@ -45,6 +45,11 @@ EXAMPLE: `/cursive target Icicles|HIGHEST_HP` will target the enemy with the hig
 can also do it only if you don't have a target already:
 `/run if not UnitName("target") then SlashCmdList.CURSIVE("target Icicles|HIGHEST_HP") end`
 
+There is also 
+`/script targetGuid = Cursive:GetTarget("str", "str", {})`: Returns guid of the unit that would be targeted based on priority and options.
+
+EXAMPLE: `/script targetGuid = Cursive:GetTarget("Corruption", "HIGHEST_HP", {})` will return guid of the enemy with the highest HP in range of the spell Corruption that doesn't already have Corruption.
+
 ## Priority Options
 
 - HIGHEST_HP - Target highest HP enemy without a curse first.
@@ -103,6 +108,45 @@ EXAMPLE: `/cursive multicurse Corruption|HIGHEST_HP|warnings,resistsound,expirin
 EXAMPLE:
 `/cursive multicurse Curse of Recklessness|RAID_MARK|name=Touched Warrior,ignorespelltexture=Spell_Shadow_UnholyStrength,resistsound,expiringsound`
 
+## Macro examples
+
+You can just put multiple commands in a macro like this
+```
+/cursive curse Curse of Recklessness|target|refreshtime=1
+/cursive curse Corruption|target|refreshtime=3
+/cursive curse Siphon Life|target|refreshtime=1
+```
+but the game won't always execute them in the order you want
+
+if you want more control of the order you can do something like
+```
+/script if not Cursive:Curse("Curse of Recklessness", "target", {refreshtime=1}) then if not Cursive:Curse("Corruption", "target", {refreshtime=3}) then Cursive:Curse("Siphon Life", "target", {refreshtime=1}) end end
+```
+This also works for Multicurse:
+```
+/script if not Cursive:Multicurse("Curse of Recklessness", "HIGHEST_HP", {refreshtime=1}) then if not Cursive:Multicurse("Corruption", "HIGHEST_HP", {refreshtime=3}) then Cursive:Multicurse("Siphon Life", "HIGHEST_HP", {refreshtime=1}) end end
+```
+
+All cursive commands will return true only if it attempted to cast or it found a target.
+
+## Shared Debuffs
+
+Shared debuffs applied by other players will appear greyed out on targets.
+
+Currently only Faerie Fire is supported as I felt it warranted special handling.  It works by looking for other players casting faerie fire and then checking if the mob has the debuff, so if someone refreshes faerie fire and gets resisted it will incorrectly restart the timer.  However, it should still correctly remove faerie fire if it falls off that target.  I didn't want to impact performance to handle this edge case.
+
+## Accessing curse data in other addons
+
+Cursive data can be accessed in other addons 
+
+You can get raw curse data using 
+`Cursive.curses:GetCurseData(spellName, guid)`
+
+Here's an example that gets the time left on Corruption on the current target:
+```
+/run _, guid = UnitExists("target"); local data = Cursive.curses:GetCurseData("Corruption", guid); print(Cursive.curses:TimeRemaining(data))
+```
+
 ## Important info
 
 If you have my latest nampower, it will use the SpellInRange function from that to provide improved range checking.
@@ -133,3 +177,4 @@ There is an option "always show current target" that will display your current t
 
 You can ignore mobs based on their unit name using the ignored mob list filter.  It is comma separated and you need to press enter to get it to save.  For example can do:
 `whelp,scarab` to ignore all mobs with those strings in their name.
+

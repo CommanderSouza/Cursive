@@ -20,6 +20,10 @@ Cursive:RegisterDefaults("profile", {
 	showhealthbar = true,
 	showunitname = true,
 
+	shareddebuffs = {
+		faeriefire = false,
+	},
+
 	alwaysshowcurrenttarget = true,
 
 	scale = 1,
@@ -410,6 +414,22 @@ local mobFilters = {
 	},
 }
 
+local sharedDebuffs = {
+	["sharedFaerieFire"] = {
+		type = "toggle",
+		name = L["Shared Faerie Fire"],
+		desc = L["This will show other player's Faerie Fires and avoid trying to cast Faerie Fire on those mobs"],
+		order = 10,
+		get = function()
+			return Cursive.db.profile.shareddebuffs.faeriefire
+		end,
+		set = function(v)
+			Cursive.db.profile.shareddebuffs.faeriefire = v
+			Cursive.UpdateFramesFromConfig()
+		end,
+	},
+}
+
 Cursive.cmdtable = {
 	type = "group",
 	handler = Cursive,
@@ -498,8 +518,15 @@ Cursive.cmdtable = {
 			type = "group",
 			name = L["Mob filters"],
 			desc = L["Target and Raid Marks always shown"],
-			order = 20,
+			order = 19,
 			args = mobFilters
+		},
+		["shareddebuffs"] = {
+			type = "group",
+			name = L["Shared Debuffs"],
+			desc = L["Shared Debuffs"],
+			order = 20,
+			args = sharedDebuffs
 		},
 		["spacer2"] = {
 			type = "header",
